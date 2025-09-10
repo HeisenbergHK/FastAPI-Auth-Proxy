@@ -1,4 +1,6 @@
-### This app handles user registration, login, token refresh, and protected routes by forwarding requests to the central auth service.
+# FastAPI-Auth-Proxy
+
+*This app handles user registration, login, token refresh, and protected routes by forwarding requests to the central auth service.*
 
 ## Features
 - User registration (/register)
