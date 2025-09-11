@@ -1,12 +1,14 @@
 # FastAPI-Auth-Proxy
 
-*This app handles user registration, login, token refresh, and protected routes by forwarding requests to the central auth service.*
+*This app handles user registration, login, token refresh, and protected routes by forwarding requests to the central auth service with automatic token refresh capability.*
 
 ## Features
 - User registration (/register)
 - Login with form data (/login)
-- Refresh access tokens (/refresh)
-- Access token-protected routes (/protected)
+- Manual token refresh (/refresh)
+- Protected routes with Bearer token (/protected)
+- **Automatic token refresh** for seamless user experience (/protected-auto)
+- Token storage with expiration tracking
 - Uses async HTTP requests for performance
 - Input validation with Pydantic
 - Token handling with HTTP Bearer authentication
@@ -57,22 +59,24 @@ uvicorn main:app --reload
 - The API will run at: http://127.0.0.1:8000
 - Open API docs at: http://127.0.0.1:8000/docs
 
+## Token Expiration
+- **Access Token**: 2 minutes
+- **Refresh Token**: 4 minutes
+- The app automatically handles token refresh when needed
+
 ## API Endpoints
 
-1. Register
-
+### 1. Register
 #### POST /register
 Request Body (JSON):
-```
+```json
 {
   "email": "user@example.com",
   "password": "password123"
 }
 ```
-- Response: Forwards the response from the central auth service.
 
-2. Login
-
+### 2. Login
 #### POST /login
 Request Body (Form Data):
 ```
@@ -83,30 +87,55 @@ scope: ""
 client_id: string
 client_secret: string
 ```
-- Response: Access token and refresh token from central auth service.
+- **Note**: Tokens are automatically stored for the user after successful login
 
-3. Refresh Token
-
+### 3. Manual Token Refresh
 #### POST /refresh
 Request Body (JSON):
-```
+```json
 {
   "refresh_token": "your-refresh-token"
 }
 ```
-- Response: New access token and refresh token.
 
-4. Protected Route
-
+### 4. Protected Route (Manual Token)
 #### GET /protected
 Headers:
 ```
 Authorization: Bearer <access_token>
 ```
+- Requires manual token management
 
-- Response: Data returned by central auth service if token is valid.
+### 5. Protected Route (Automatic Refresh)
+#### GET /protected-auto
+- **New Feature**: Automatically refreshes expired access tokens
+- Uses session cookies from login (no parameters needed)
+- No need to manually handle token expiration
+- Returns 401 if session expired or refresh token expired
+
+### 6. Logout
+#### POST /logout
+- Clears session and stored tokens
+- Removes authentication cookies
+
+## Automatic Token Management
+The app now includes intelligent token management:
+- **Session-based authentication**: Login creates a secure session cookie
+- Tokens are stored server-side with expiration timestamps
+- Access tokens are automatically refreshed when expired
+- Users don't need to handle token refresh manually
+- Session expires when refresh token expires (4 minutes)
+- Automatic cleanup of expired sessions and tokens
+
+## Usage Flow
+1. **Login** → Creates session cookie + stores tokens
+2. **Access /protected-auto** → Uses session cookie (no Bearer token needed)
+3. **Automatic refresh** → Happens transparently when access token expires
+4. **Logout** → Clears session and tokens
 
 ### Notes
-- All requests to the central auth service are proxied, so your API does not handle password storage.
-- The app uses async calls for better performance.
-- Input validation is enforced using Pydantic models.
+- All requests to the central auth service are proxied
+- Session-based authentication with HTTP-only cookies
+- Token storage is in-memory (use Redis/database in production)
+- Async calls for better performance
+- Input validation with Pydantic models
